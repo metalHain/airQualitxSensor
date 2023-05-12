@@ -6,3 +6,5 @@ measured values and a plot. measured values are temporarily saved on atmega and 
 micro sd card.
 
 explanation of files:
+
+communication display
