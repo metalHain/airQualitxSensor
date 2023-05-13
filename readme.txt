@@ -1,13 +1,10 @@
-this is the readme file for study project of devoloping an atmega based air quality
+this is the readme file for our study project of devoloping an atmega328p based air quality
 measuring unit.
 
 aim is to devolop a user interface where you can move through diffrent pages seeing
-measured values and a plot. measured values are temporarily saved on atmega and comited to a 
-micro sd card.
+measured values and a plot. measured values are temporarily saved on atmega and commited to a 
+micro sd card. which can then be post processed via matlab or python
 
 explanation of files:
-
-communication display
-
-co2 sensor
-averaing values
+ 
+// to do
