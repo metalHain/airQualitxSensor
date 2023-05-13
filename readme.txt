@@ -8,3 +8,6 @@ micro sd card.
 explanation of files:
 
 communication display
+
+co2 sensor
+averaing values
