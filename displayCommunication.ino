@@ -12,7 +12,7 @@ RTC_DS1307 rtc;
 
 // I2C address for CO2-Sensor
 const int16_t SCD_ADDRESS = 0x62; 
-const int16_t RTC_ADDRESS = 0x68;
+// const int16_t RTC_ADDRESS = 0x68;
 
 /*            
 #define DHTPIN 2          
@@ -86,10 +86,7 @@ float CO2Concentration(){
 }
 
 void set_values(){
-  // RTC
-  Wire.begin(RTC_ADDRESS);
   DateTime now = rtc.now();
-  Wire.endTransmission();
 
   delay(1000);
   
@@ -165,13 +162,9 @@ void setup() {
   nexInit(); // Initialize Nextion communication
   //dht.begin();
 
-  Wire.begin(RTC_ADDRESS);
-
-  rtc.begin(RTC_ADDRESS); // Initialize the RTC module
+  rtc.begin(); // Initialize the RTC module
   // Set the date and time of the RTC module
   //rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
-
-  Wire.endTransmission();
 
   delay(1000);
 
