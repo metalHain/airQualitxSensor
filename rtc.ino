@@ -111,3 +111,51 @@ void receiveTime(){
   Serial.print("Current datetime: ");
   Serial.println(data);
 }
+
+/*int bcdtable(int dec){
+    if(dec == 0)
+        return 0000;
+    else if(dec == 1)
+        return 0001;
+    else if(dec == 2)
+        return 0010;
+    else if(dec == 3)
+        return 0011;
+    else if(dec == 4)
+        return 0100;
+    else if(dec == 5)
+        return 0101;
+    else if(dec == 6)
+        return 0110;
+    else if(dec == 7)
+        return 0111;
+    else if(dec == 8)
+        return 1000;
+    else
+        return 1001;
+        
+}
+int bcdToDecimal(int num)
+{
+    int tens;
+    int ones;
+    int bcd[8];
+    
+    // tens
+    if(num >= 10){
+        tens = num / 10;
+    }
+    
+    // ones
+    ones = num % 10;
+    
+    printf("tens: %d\t", bcdtable(tens));
+    printf("ones: %d", bcdtable(ones));
+}
+
+int main()
+{
+    bcdToDecimal(90);
+
+    return 0;
+}*/
