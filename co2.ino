@@ -6,11 +6,6 @@ const int16_t SCD_ADDRESS = 0x62;
 void setup(){
   Serial.begin(9600);
   Wire.begin();
-
-  Wire.beginTransmission(SCD_ADDRESS);
-  Wire.write(0x21);
-  Wire.write(0xb1);
-  Wire.endTransmission();
 }
 
 void loop()
