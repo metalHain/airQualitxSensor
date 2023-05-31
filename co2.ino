@@ -11,7 +11,8 @@ void setup(){
 void loop()
 { 
     float co2 = CO2Concentration();
-    Serial.println("co2: ", co2);
+    Serial.print("co2: ");
+    Serial.println(co2);
 }
 
 float CO2Concentration(){
@@ -28,5 +29,5 @@ float CO2Concentration(){
     data[counter++] = Wire.read();
   }
   
-  return (float)((uint16_t)data[0] << 8 | data[1])); // CO2 value
+  return (float)((uint16_t)data[0] << 8 | data[1]); // CO2 value
 }
