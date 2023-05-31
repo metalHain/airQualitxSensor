@@ -10,9 +10,6 @@ void setup() {
   // comment the following line if you'd like the output
   // without waiting for the interface being ready
   while(!Serial);
-
-  // output format
-  Serial.println("CO2(ppm)\tTemperature(degC)\tRelativeHumidity(percent)");
   
   // init I2C
   Wire.begin();
