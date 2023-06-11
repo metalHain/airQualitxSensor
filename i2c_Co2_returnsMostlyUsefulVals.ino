@@ -1,6 +1,8 @@
 #define DS1307_ADDRESS 0x68 
 #define SCD_ADDRESS 0x62
 
+int currentTime[7];
+
 
 #include <Wire.h>
 
@@ -12,18 +14,38 @@ void setup()
   Serial.flush();
   
   // year (00-99) / month (1-12) / monthday (1-31) / weekday (1-7) / hour (0-23) /  minute (0-59) / second (always zero)
-  setDateTime(23, 5, 24, 4, 20, 17, 0);
+  setDateTime(23, 6, 11, 1, 16, 59, 0);
+
+  // wait until sensors are ready, > 1000 ms according to datasheet
+  delay(1000);
+
+  // wait for first measurement to be finished
+  delay(5000);
 }
 
 void loop()
 {
-  delay(1000);
-  printDateTime();
+  printDateTime(currentTime);
 
-  delay(2000);
+  Serial.print(currentTime[2]);
+  Serial.print(" - ");
+  Serial.print(currentTime[1]);
+  Serial.print(" - ");
+  Serial.print(currentTime[0]);
 
-  float co2 = CO2Concentration();
-  Serial.print("\t co2: ");
+  Serial.print(" \t ");
+  Serial.print(currentTime[4]);
+  Serial.print(" / ");
+  Serial.print(currentTime[5]);
+  Serial.print(" / ");
+  Serial.print(currentTime[6]);
+
+  float co2;
+
+  delay(6000);
+
+  co2 = co2_concentration();
+  Serial.print("\tCO2: ");
   Serial.println(co2);
 }
 
@@ -41,52 +63,31 @@ void setDateTime(byte year, byte month, byte monthday, byte weekday, byte hour, 
   Wire.write(decToBcd(byte(minute)));
   Wire.write(decToBcd(byte(hour)));
   Wire.write(decToBcd(byte(hour)));
-  Wire.write(decToBcd(byte(hour)));
+  Wire.write(decToBcd(byte(monthday)));
   Wire.write(decToBcd(byte(month)));
   Wire.write(decToBcd(byte(year)));
   Wire.write(byte(0));
   Wire.endTransmission();
 }
-/*
-byte readByte()
-{
-  while (!Serial.available()) {
-    delay(10);
-  }
-  byte reading = 0;
-  byte incomingByte = Serial.read();
-  while (incomingByte != '\n') {
-    if (incomingByte >= '0' && incomingByte <= '9') {
-      reading = reading * 10 + (incomingByte - '0');
-  }
-    incomingByte = Serial.read();
-  }
-  //Serial.println(reading, BIN);
-  Serial.flush();
-  return reading;
-}
-*/
+
 // Prints the current date/time set in the RTC module to the serial monitor
 
-void printDateTime()
+void printDateTime(int nowTime[7])
 {
   Wire.beginTransmission(DS1307_ADDRESS);
   Wire.write(0x00);
   Wire.endTransmission();
   Wire.requestFrom(DS1307_ADDRESS, 7);
 
-  byte nowSeconds = bcdToDec(Wire.read());
-  byte nowMinute = bcdToDec(Wire.read());
-  byte nowHour = bcdToDec(Wire.read() & 0b111111);
-  byte nowWeekDay = bcdToDec(Wire.read());
-  byte nowMonthDay = bcdToDec(Wire.read());
-  byte nowMonth = bcdToDec(Wire.read());
-  byte nowYear = bcdToDec(Wire.read());
-
-  char data[20] = "";
-  sprintf(data, "20%02d-%02d-%02d %02d:%02d:%02d", nowYear, nowMonth, nowMonthDay, nowHour, nowMinute, nowSeconds);
-  Serial.print("Current datetime: ");
-  Serial.print(data);
+  while(Wire.available()){
+    nowTime[0] = bcdToDec(Wire.read());              // seconds
+    nowTime[1] = bcdToDec(Wire.read());              // minute
+    nowTime[2] = bcdToDec(Wire.read() & 0b111111);   // hour
+    nowTime[3] = bcdToDec(Wire.read());              // weekday
+    nowTime[4] = bcdToDec(Wire.read());              // monthday
+    nowTime[5] = bcdToDec(Wire.read());              // month
+    nowTime[6] = bcdToDec(Wire.read());              // year
+  }
 }
 
 // Converts a decimal (Base-10) integer to BCD (Binary-coded decimal)
@@ -101,36 +102,40 @@ int bcdToDec(int value)
   return ((value/16*10) + (value%16));
 }
 
-float CO2Concentration(){
-  // get_data_ready
+float co2_concentration(){
+  float co2, temperature, humidity;
+  uint8_t data[12], counter;
+
+  // measure single shot delay 5000
   Wire.beginTransmission(SCD_ADDRESS);
-  Wire.write(0xe4b8);
+  Wire.write(0x21);
+  Wire.write(0x9d);
   Wire.endTransmission();
 
-  delay(1000);
+  delay(5000);
 
-  Wire.requestFrom(SCD_ADDRESS, 3);
-
+  // send read data command
+  Wire.beginTransmission(SCD_ADDRESS);
+  Wire.write(0xec);
+  Wire.write(0x05);
+  Wire.endTransmission();
   
-  if(Wire.read() & 0x8000){
-    Serial.print("du vogel daten noch nicht fertig");
-    return 0.0;
-  }
-
-  Wire.beginTransmission(SCD_ADDRESS);
-  Wire.write(0xec05);
-  Wire.endTransmission();
-
-  delay(1000);
-
+  // read measurement data: 2 bytes co2, 1 byte CRC,
+  // 2 bytes T, 1 byte CRC, 2 bytes RH, 1 byte CRC,
+  // 2 bytes sensor status, 1 byte CRC
+  // stop reading after 12 bytes (not used)
+  // other data like  ASC not included
   Wire.requestFrom(SCD_ADDRESS, 12);
 
-  uint8_t data[12];
-  uint8_t counter = 0;
-
+  counter = 0;
   while (Wire.available()) {
     data[counter++] = Wire.read();
   }
   
-  return (float)((uint16_t)data[0] << 8 | data[1]); // CO2 value
+  // floating point conversion according to datasheet
+  co2 = (float)((uint16_t)data[0] << 8 | data[1]);
+
+
+  // wait 2 s for next measurement
+  return co2;
 }
