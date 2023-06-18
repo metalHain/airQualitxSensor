@@ -8,6 +8,8 @@
 
 int currentTime[7];
 int i = 0;
+double bat_ADC;
+double batLevel;
 
 #include <Wire.h>
 #include <SPI.h>
@@ -145,21 +147,26 @@ void addValuesToSDCard(){
 
   char buffer[200];
   // hour minute  day month year  temp  humi  co  co2 batLevel
-  int bat_ADC = analogRead(A0);
+
+  bat_ADC = 0;
+  batLevel = 0;
+
+  for(int z = 1; z <= 200; z++){
+    bat_ADC += analogRead(A0);
+  }
+
+  bat_ADC = bat_ADC / 200;
+  batLevel = bat_ADC * 5.0 / 1023;
+  
   sprintf(buffer, "%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t", i, currentTime[2], currentTime[1], currentTime[4], currentTime[5], currentTime[6], bat_ADC, bat_ADC, bat_ADC, bat_ADC);
   
   //Serial.println(buffer);
 
   logfile.print(buffer);
 
-  double batLevel = 0;
+  logfile.println(batLevel);
 
-  for(int i = 1; i <= 20; i++){
-    batLevel += (double) (bat_ADC * 5.0 / 1023);
-  }
-  logfile.println( batLevel / 20.0 );
-
-  Serial.println( batLevel / 20.0 );
+  Serial.println( batLevel);
 
   logfile.close();
   i++;
