@@ -1,13 +1,17 @@
 #define DS1307_ADDRESS 0x68
+// SPI       PINS
+// MOSI       11
+// MISO       12
+// CLOCK      13
+// CS         10
 #define CS    7     // adjust this ChipSelect line if needed !
 
-char buffer[24];
 int currentTime[7];
+int i = 0;
 
 #include <Wire.h>
 #include <SPI.h>
 #include <SD.h>
-#include <XMLWriter.h>
 
 void setup()
 {
@@ -17,18 +21,20 @@ void setup()
   Serial.flush();
   
   // year (00-99) / month (1-12) / monthday (1-31) / weekday (1-7) / hour (0-23) /  minute (0-59) / second (always zero)
-  //setDateTime(23, 6, 14, 4, 18, 3, 0);
+  //setDateTime(23, 6, 16, 6, 15, 45, 0);
 
   initSDcard();
 
-  delay(2000);
+  // wait for first measurement to be finished
+  delay(5000);
+
+  pinMode(A0, INPUT);
 }
 
 void loop()
 {
-  printDateTime(currentTime);
-  addValuesToSDCard(currentTime);
-  delay(30000);
+  addValuesToSDCard();
+  delay(10000);
 }
 
 // Sets date/time of the RTC module via the serial monitor
@@ -90,57 +96,71 @@ void initSDcard(){
   {
     Serial.println("init1 Error: SD card failure");
   }
-
+  /*
+  // remove file for proper timing
   SD.remove("data.xml");
   delay(1000);
+  */
 
-  File logfile = SD.open("data.xml", FILE_WRITE);
+  File logfile = SD.open("data.txt", FILE_WRITE);
   if (!logfile)
   {
     Serial.println("init2Error: SD card failure");
   }
 
-  XMLWriter XML(&logfile);
-  XML.header();
-  XML.comment("File to track battery level over time", true);
-  XML.comment("Time + bat level in volts");
-  XML.flush();
+  logfile.println("hour minute  day month year  temp  humi  co  co2 batLevel");
 
   logfile.close();
 
   Serial.println("Setup done done...");
 }
 
-void addValuesToSDCard(int nowTime[7]){
+void addValuesToSDCard(){
   if (!SD.begin(CS))
   {
     Serial.println("addVal Error: SD card failure");
   }
 
-
-  File logfile = SD.open("data.xml", FILE_WRITE);
+  File logfile = SD.open("data.txt", FILE_WRITE);
   if (!logfile)
   {
     Serial.println("addVal2 Error: SD card failure");
   }
 
-  XMLWriter XML(&logfile);
-  int data[3];
+  printDateTime(currentTime);
 
-  data[0] = analogRead(A0);
-  data[1] = analogRead(A1);
-  data[2] = analogRead(A2);
+  Serial.print(currentTime[2]);
+  Serial.print(" - ");
+  Serial.print(currentTime[1]);
+  Serial.print(" - ");
+  Serial.print(currentTime[0]);
 
-  XML.tagStart("time <and voltage level dd mm yy / hh min sec / batLev");
-  XML.tagField("", (uint16_t) nowTime[4]);
-  XML.tagField("", (uint16_t) nowTime[5]);
-  XML.tagField("", (uint16_t) nowTime[6]);
-  XML.tagField("", (uint16_t) nowTime[2]);
-  XML.tagField("", (uint16_t) nowTime[1]);
-  XML.tagField("", (uint16_t) nowTime[0]);
-  XML.tagField("(batLev)", (double) (analogRead(A0) * 5.0 / 1023));
-  XML.tagEnd(); 
-  XML.flush();
+  Serial.print(" \t ");
+  Serial.print(currentTime[4]);
+  Serial.print(" / ");
+  Serial.print(currentTime[5]);
+  Serial.print(" / ");
+  Serial.println(currentTime[6]);
+  
+
+  char buffer[200];
+  // hour minute  day month year  temp  humi  co  co2 batLevel
+  int bat_ADC = analogRead(A0);
+  sprintf(buffer, "%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t", i, currentTime[2], currentTime[1], currentTime[4], currentTime[5], currentTime[6], bat_ADC, bat_ADC, bat_ADC, bat_ADC);
+  
+  //Serial.println(buffer);
+
+  logfile.print(buffer);
+
+  double batLevel = 0;
+
+  for(int i = 1; i <= 20; i++){
+    batLevel += (double) (bat_ADC * 5.0 / 1023);
+  }
+  logfile.println( batLevel / 20.0 );
+
+  Serial.println( batLevel / 20.0 );
 
   logfile.close();
+  i++;
 }
