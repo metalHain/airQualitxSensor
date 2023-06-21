@@ -14,6 +14,8 @@
 // CLOCK      13
 // CS         10
 #define CS    7     // adjust this ChipSelect line if needed !
+#define MAX_HOUR_BUF_SIZE 180
+#define MAX_AVG_BUF_SIZE 24
 
 // global variables =========================================================================
 
@@ -23,8 +25,17 @@ int i = 0;
 double bat_ADC;
 double batLevel;
 
+int write_idx_hour_buf = 0;
+int write_idx_avg_buf = 0;
+int elements_hour_buf = 0;
+int elements_avg_buf = 0;
+
+// synchronization variables
+volatile int hour_buf_SEM = 1;
+volatile int avg_buf_SEM = 1;
+
+// basic data structure
 struct sensedData{
-  int sync_MayRead;
   byte hour;
   byte minute;
   byte second;
@@ -37,6 +48,10 @@ struct sensedData{
   byte humidity;
   double batLevel;
 }
+
+// circular buffers
+struct sensedData hour_circBuffer[MAX_HOUR_BUF_SIZE];
+struct sensedData avg_24h_circBuffer[MAX_AVG_BUF_SIZE];
 
 // function prototypes ======================================================================
 
@@ -51,7 +66,7 @@ float co2_concentration();
 
 // SD Card
 void initSDcard();
-void addValuesToSDCard(sensedData values);
+void addValuesToSDCard(sensedData values);  // pass circular buffer to sd card need to catch errors and write just vals of one hour
 void deleteFileOnSDCard(char * fileName);
 
 // CO Sensor
@@ -194,4 +209,25 @@ void addValuesToSDCard(){
 
   logfile.close();
   i++;
+}
+
+void write_to_hour_buf(struct sensedData values){
+  if(!buffer_full(writeIdxSensedDataBuffer, MAX_BUFFER_SIZE))
+  {
+    circularSensedData[writeIdxSensedDataBuffer] = getSensordata(currTime, dht); // Adapt with circular buffer and arguments
+    writeIdxSensedDataBuffer++;
+  }else
+  {
+    //Buffer is full, either overwrite or stop writing to buffer
+
+    if(overwriteSensedDataBuffer)
+    {
+      if(writeIdxSensedDataBuffer == MAX_BUFFER_SIZE)
+        writeIdxSensedDataBuffer = 0;
+
+      circularSensedData[writeIdxSensedDataBuffer] = getSensordata(currTime, dht); // Adapt with circular buffer and arguments
+
+      writeIdxSensedDataBuffer++;
+    }
+  }
 }
