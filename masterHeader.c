@@ -198,9 +198,9 @@ void addValuesToSDCard(){ // make to function write buffer to sd card
   printDateTime(currentTime);
 
   char buffer[200];
-  // index hour minute  day month year  temp  humi  co  co2 batLevel
+  // index hour minute  sec day month year  temp  humi  co  co2 batLevel
   
-  sprintf(buffer, "%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d", i, currentTime[2], currentTime[1], currentTime[4], currentTime[5], currentTime[6], temperature, humidity, co, co2, batLev);
+  sprintf(buffer, "%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d", i, currentTime[2], currentTime[1], currentTime[0], currentTime[4], currentTime[5], currentTime[6], temperature, humidity, co, co2, batLev);
 
   logfile.print(buffer);
 
