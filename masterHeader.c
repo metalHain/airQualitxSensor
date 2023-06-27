@@ -3,11 +3,12 @@
 #include <Wire.h>
 #include <SPI.h>
 #include <SD.h>
+#include <DHT.h>
 
 // defines ==================================================================================
 
 #define DS1307_ADDRESS 0x68 	// rtc address
-#define SCD_ADDRESS 0x62	// co2 address
+#define SCD_ADDRESS 0x62		// co2 address
 // SPI       PINS
 // MOSI       11
 // MISO       12
@@ -16,6 +17,9 @@
 #define CS    7     // adjust this ChipSelect line if needed !
 #define MAX_HOUR_BUF_SIZE 180
 #define MAX_AVG_BUF_SIZE 24
+
+#define DHTPIN 2
+#define DHTTYPE DHT22
 
 // global variables =========================================================================
 
@@ -53,6 +57,8 @@ struct sensedData{
 struct sensedData hour_circBuffer[MAX_HOUR_BUF_SIZE];
 struct sensedData avg_24h_circBuffer[MAX_AVG_BUF_SIZE];
 
+DHT dht(DHTPIN, DHTTYPE);
+
 // function prototypes ======================================================================
 
 // RTC Clock
@@ -70,7 +76,12 @@ void addValuesToSDCard(sensedData values);  // pass circular buffer to sd card n
 void deleteFileOnSDCard(char * fileName);
 
 // CO Sensor
+float co_concentration();
+
 // Temperature + humidity sensor
+float room_temperature();
+float room_humidity();
+
 // Display
 // error handling
 
@@ -169,10 +180,10 @@ void initSDcard(sensedData values){
 
   logfile.close();
 
-  Serial.println("Setup done done...");
+  Serial.println("Setup of SD Card succeded...");
 }
 
-void addValuesToSDCard(){
+void addValuesToSDCard(){ // make to function write buffer to sd card
   if (!SD.begin(CS))
   {
     Serial.println("addVal Error: SD card failure");
@@ -187,19 +198,9 @@ void addValuesToSDCard(){
   printDateTime(currentTime);
 
   char buffer[200];
-  // hour minute  day month year  temp  humi  co  co2 batLevel
-
-  bat_ADC = 0;
-  batLevel = 0;
-
-  for(int z = 1; z <= 200; z++){
-    bat_ADC += analogRead(A0);
-  }
-
-  bat_ADC = bat_ADC / 200;
-  batLevel = bat_ADC * 5.0 / 1023;
+  // index hour minute  day month year  temp  humi  co  co2 batLevel
   
-  sprintf(buffer, "%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t", i, currentTime[2], currentTime[1], currentTime[4], currentTime[5], currentTime[6], bat_ADC, bat_ADC, bat_ADC, bat_ADC);
+  sprintf(buffer, "%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d", i, currentTime[2], currentTime[1], currentTime[4], currentTime[5], currentTime[6], temperature, humidity, co, co2, batLev);
 
   logfile.print(buffer);
 
@@ -231,3 +232,50 @@ void write_to_hour_buf(struct sensedData values){
     }
   }
 }
+
+// CO Sensor ===============================================================================================================
+float co_concentration()
+{
+	float co_conc = 0;
+	int offset = 0.15; //150 mV constant offset
+	
+	analogReference(INTERNAL);
+	
+	for(int co_cnt = 1; co_cnt <= 50; co_cnt++){
+		co_cnt += analogRead(A0);
+		delay(1);
+	}
+	
+	co_conc = ( co_cnt * 1.1 / 1023 ) / 50;
+	
+	analogReference(DEFAULT);
+	
+	return co_conc;
+}
+
+// Temperature + humidity sensor ===============================================================================================================
+
+float room_temperature()
+{
+	float room_tmp = dht.readTemperature();
+	
+	if(isnan(room_tmp)){
+			Serial.println("Error reading DHT22_Temp");
+	}else{
+		return room_tmp
+	}
+}
+
+float room_humidity()
+{
+	float room_humidi = dht.readHumidity();
+	
+	if(isnan(room_humidi)){
+			Serial.println("Error reading DHT22_Temp");
+	}else{
+		return room_humidi
+	}
+}
+
+// Display
+// error handling
