@@ -242,7 +242,7 @@ float co_concentration()
 	analogReference(INTERNAL);
 	
 	for(int co_cnt = 1; co_cnt <= 50; co_cnt++){
-		co_cnt += analogRead(A0);
+		co_conc += analogRead(A0);
 		delay(1);
 	}
 	
@@ -262,7 +262,7 @@ float room_temperature()
 	if(isnan(room_tmp)){
 			Serial.println("Error reading DHT22_Temp");
 	}else{
-		return room_tmp
+		return room_tmp;
 	}
 }
 
@@ -273,7 +273,7 @@ float room_humidity()
 	if(isnan(room_humidi)){
 			Serial.println("Error reading DHT22_Temp");
 	}else{
-		return room_humidi
+		return room_humidi;
 	}
 }
 
