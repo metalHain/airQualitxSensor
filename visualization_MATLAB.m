@@ -14,7 +14,7 @@ yy = readData(:,7);
 mm  = readData(:,6);
 dd = readData(:,5);
 hh = readData(:,2);
-min = readData(:,3);
+minutes = readData(:,3);
 sec = readData(:,4);
 
 % sensor values in vectors
@@ -24,8 +24,11 @@ co_conc = readData(:, 10);
 co2_conc = readData(:,11);
 batLev = readData(:,12);
 
-datesFromReadDate = datetime(yy, mm, dd, hh, min, sec);
+datesFromReadDate = datetime(yy, mm, dd, hh, minutes, sec);
 
+% median - min - max calculations
+
+Statistics = table(temperature, humidity, co_conc, co2_conc, batLev);
 
 % plot graphs
 
@@ -67,4 +70,6 @@ title("battery voltage");
 ylabel("battery voltage [V]")
 xlabel("time")
 
+
+summary(Statistics);
 
