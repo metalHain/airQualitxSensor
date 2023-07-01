@@ -12,6 +12,8 @@ DHT dht(DHTPIN, DHTTYPE);
 void setup()
 {
   Serial.begin(9600);
+  Wire.begin();
+  delay(1000);
 }
 
 void loop()
@@ -20,12 +22,12 @@ void loop()
 
   co2 = co2_concentration();
   co = co_concentration();
-  temp = room_temperature();
-  humi = room_humidity();
+  //temp = room_temperature();
+  //humi = room_humidity();
 
   char ausgabe[300]; 
 
-  sprintf(ausgabe, "%f\t%f\t%f\t%f", co2, co, temp, humi);
+  sprintf(ausgabe, "%d\t%d", (int) co2, (int) co);
 
   Serial.println(ausgabe);
 }
@@ -34,6 +36,13 @@ void loop()
 float co2_concentration(){
   float co2;
   uint8_t data[12], counter = 0;
+
+  Wire.beginTransmission(SCD_ADDRESS);
+  Wire.write(0x36); // wake up
+  Wire.write(0xf6);
+  Wire.endTransmission();
+
+  delay(30);
 
   Wire.beginTransmission(SCD_ADDRESS);
   Wire.write(0x21); // measure single shot max delay 5000 ms
