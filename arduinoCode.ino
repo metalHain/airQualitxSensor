@@ -10,15 +10,15 @@ void setup() {
   // wait for serial connection from PC
   // comment the following line if you'd like the output
   // without waiting for the interface being ready
-  while(!Serial);
+  //while(!Serial);
 
   // wait until sensors are ready, > 1000 ms according to datasheet
   delay(1000);
   
-  // start scd measurement in periodic mode, will update every 5 s
+  // start scd measurement in periodic mode, will update every 30 s
   Wire.beginTransmission(SCD_ADDRESS);
   Wire.write(0x21);
-  Wire.write(0xb1);
+  Wire.write(0xac);
   Wire.endTransmission();
 
   // wait for first measurement to be finished
@@ -37,7 +37,7 @@ void loop() {
   sensorVals.batLevel = aq.bat_Voltage();
 
   // convert double values to string so serial.print can handle it
-  char buffer[200];
+  char buffer[100];
 
   char co_conc[9];
   dtostrf(sensorVals.co, 4, 4, co_conc);
@@ -54,9 +54,9 @@ void loop() {
 
   sprintf(buffer, "%d\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%d\t%s\t%s\n", currentTime[2], currentTime[1], currentTime[0], currentTime[4], currentTime[5], currentTime[6], temperature_string, humidity_string, sensorVals.co2, co_conc, batVoltage_string);
   
-  aq.add_values_to_hourly_buf(sensorVals);
+  //aq.add_values_to_hourly_buf(sensorVals);
   aq.addValuesToSDCard(buffer);
   Serial.println(buffer);
 
-  delay(5000); 
+  delay(30000); 
 }
