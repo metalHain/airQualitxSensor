@@ -33,10 +33,13 @@ void loop() {
     datalogging();
     program_ticks = millis();
 
-    set_plot_CO(sensorVals.co);
-    set_plot_CO2(sensorVals.co2);
-    set_plot_HUM(sensorVals.humidity);
-    set_plot_TEMP(round(sensorVals.temperature));
+    for(int cnt = 1; cnt <= 4; cnt++)
+    {
+      set_plot_CO(sensorVals.co);
+      set_plot_CO2(sensorVals.co2);
+      set_plot_HUM(sensorVals.humidity);
+      set_plot_TEMP(round(sensorVals.temperature));
+    }
   }
   
   updateDisplay();
@@ -54,12 +57,9 @@ void datalogging()
   room_temperature_humidity();
   sensorVals.temperature = temp_hum_val[1];
   sensorVals.humidity = (int) round(temp_hum_val[0]);
-  
+  batLev = bat_Level();
 
-  char temperature_string[5];
-  dtostrf(sensorVals.temperature, 4, 2, temperature_string);
-
-  sprintf(log, "%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%s\t%d\0", currentTime[2], currentTime[1], currentTime[0], currentTime[4], currentTime[5], currentTime[6], sensorVals.co, sensorVals.co2, temperature_string, sensorVals.humidity);
+  sprintf(log, "%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d.%d\t%d\t%d.%d\0", currentTime[2], currentTime[1], currentTime[0], currentTime[4], currentTime[5], currentTime[6], sensorVals.co, sensorVals.co2, (int) sensorVals.temperature, (int)(100 * (sensorVals.temperature - (int)(sensorVals.temperature))), sensorVals.humidity, (int) batLev, (int) (100 * (batLev - (int) batLev)));
 
   addValuesToSDCard(log);
   add_values_to_AVG_buf(currentTime[2], sensorVals);
