@@ -22,7 +22,10 @@ float co_avg_tmp, co2_avg_tmp, temp_avg_tmp, humi_avg_tmp;
 float temp_hum_val[2] = {0};    
 static unsigned long int program_ticks = millis();
 float batLev;
+
 float ref_BatLev = 0;
+int batLevCnt = -1;
+int lastLev = 0;
 
 // function prototypes
 void set_RTC_time(byte year, byte month, byte monthday, byte weekday, byte hour, byte minute, byte second);
@@ -34,7 +37,7 @@ void add_values_to_AVG_buf(int currentHour, struct sensedData values);
 float co2_concentration();
 float co_concentration();
 void room_temperature_humidity();
-int bat_Level();
+float bat_Level();
 int decToBcd(int value);
 int bcdToDec(int value);
 
@@ -79,6 +82,8 @@ static struct sensedData sensorVals;
 NexProgressBar batteryBar = NexProgressBar(1,5,"a");
 
 NexText clock = NexText(1,6,"b");
+//NexText clock1 = NexText(6,16,"b");
+//NexText clock2 = NexText(7,16,"b");
 
 NexNumber t_mv_cv_CO = NexNumber(2,7,"c");
 NexNumber t_mv_cv_CO2 = NexNumber(2,9,"d");
@@ -319,29 +324,44 @@ void room_temperature_humidity()
 // --------------------------------------------------------------------------------- +++++++++++++++++++++++++++++++++++++++++++++++ ------------------------------------------------------------------------
 // battery voltage
 
-int bat_Level(){
-	batLev = 0;
+float bat_Level(){
+  float batVol = 0;
 	
 	for(int bat_cnt = 1; bat_cnt <= 50; bat_cnt++){
-		batLev += analogRead(BAT_VOLTAGE_PIN);
+		batVol += analogRead(BAT_VOLTAGE_PIN);
 		delay(1);
 	}
 	
-	batLev = (batLev * 5.0 / 1023) / 50;
+	batVol = (batVol * 5.0 / 1023) / 50; // current battery voltage load depedent
 
-  if(abs(batLev - 4.2) < abs(batLev - 3.95)){
-    return 100;
-  }
-  if(abs(batLev - 3.95) < abs(batLev - 3.7)){
-    return 75;
-  }
-  if(abs(batLev - 3.7) < abs(batLev - 3.2)){
-    return 25;
-  }
-  else
+  if(batLevCnt == -1) // system start takes batteryLevel indicator based on batteryVoltage
   {
-    return 0;
+    if(batVol >= 4.1){ lastLev = 100;}
+    else if(batVol <= 2.9){ lastLev = 0;}
+    else {lastLev = (int) ((batVol - 2.9) / 1.3 * 100);}
+
+    batLevCnt = 0;
+    return lastLev;
   }
+
+  ref_BatLev += batVol;
+  batLevCnt++;
+
+  if(batLevCnt == 20){
+    ref_BatLev = ref_BatLev / batLevCnt;
+    batLevCnt = 0;
+
+    if((batVol < 0.98 * ref_BatLev) || (batVol > 0.98 * ref_BatLev)) // deviation is too big, so update battery level
+    {
+      if(batVol >= 4.1){ lastLev = 100;}
+      else if(batVol <= 2.9){ lastLev = 0;}
+      else {lastLev = (int) ((batVol - 2.9) / 1.3 * 100);}
+
+      return lastLev;
+    }
+  }
+
+  return lastLev;
 }
 
 char* floatToChar(float value) {
@@ -381,30 +401,35 @@ void set_mv_cv(){
   int mv_cv_hum = sensorVals.humidity;
   float mv_cv_temp = sensorVals.temperature;
 
-  byte critical_CO = 130;
+  byte critical_CO = 50;
   byte optimal_CO = 0;
-  int critical_CO2 = 1500;
-  int optimal_CO2 = 800;
-  byte critical_hum = 8;
-  byte optimal_hum = 65;
+
+  int critical_CO2 = 1800;
+  int optimal_CO2 = 1000;
+
+  byte optimal_hum_lower = 40;
+  byte optimal_hum_higher = 60;
+  byte critical_hum_lower = 30;
+  byte critical_hum_higher = 70;
+
   byte critical_temp = 35;
-  byte optimal_temp = 20;
+  byte optimal_temp = 26;
 
-  if (mv_cv_CO <= optimal_CO){t_mv_cv_CO.Set_background_color_bco(1024);}
-  else if (mv_cv_CO>optimal_CO && mv_cv_CO<critical_CO){t_mv_cv_CO.Set_background_color_bco(50720);}
-  else {t_mv_cv_CO.Set_background_color_bco(63488);}
+  if (mv_cv_CO <= optimal_CO){t_mv_cv_CO.Set_background_color_bco(1024); t_mv_cv_CO.Set_font_color_pco(65535);}
+  else if (mv_cv_CO>optimal_CO && mv_cv_CO<critical_CO){t_mv_cv_CO.Set_background_color_bco(50720); t_mv_cv_CO.Set_font_color_pco(0);}
+  else {t_mv_cv_CO.Set_background_color_bco(63488); t_mv_cv_CO.Set_font_color_pco(65535); }
 
-  if (mv_cv_CO2 <= optimal_CO2){t_mv_cv_CO2.Set_background_color_bco(1024);}
-  else if (mv_cv_CO2>optimal_CO2 && mv_cv_CO2<critical_CO2){t_mv_cv_CO2.Set_background_color_bco(50720);}
-  else {t_mv_cv_CO2.Set_background_color_bco(63488);}
+  if (mv_cv_CO2 <= optimal_CO2){t_mv_cv_CO2.Set_background_color_bco(1024); t_mv_cv_CO2.Set_font_color_pco(65535);}
+  else if (mv_cv_CO2>optimal_CO2 && mv_cv_CO2<critical_CO2){t_mv_cv_CO2.Set_background_color_bco(50720); t_mv_cv_CO2.Set_font_color_pco(0);}
+  else {t_mv_cv_CO2.Set_background_color_bco(63488);  t_mv_cv_CO2.Set_font_color_pco(65535);}
 
-  if (mv_cv_hum <= optimal_hum){t_mv_cv_hum.Set_background_color_bco(1024);}
-  else if (mv_cv_hum>optimal_hum && mv_cv_hum<critical_hum){t_mv_cv_hum.Set_background_color_bco(50720);}
-  else {t_mv_cv_hum.Set_background_color_bco(63488);}
+  if (mv_cv_hum <= optimal_hum_higher &&  mv_cv_hum >= optimal_hum_lower){t_mv_cv_hum.Set_background_color_bco(1024); t_mv_cv_hum.Set_font_color_pco(65535);}
+  else if ( (critical_hum_lower <= mv_cv_hum && mv_cv_hum < optimal_hum_lower) || (mv_cv_hum > optimal_hum_higher && mv_cv_hum <= critical_hum_higher) ){t_mv_cv_hum.Set_background_color_bco(50720); t_mv_cv_hum.Set_font_color_pco(0);}
+  else {t_mv_cv_hum.Set_background_color_bco(63488); t_mv_cv_hum.Set_font_color_pco(65535);}
 
-  if (mv_cv_temp <= optimal_temp){t_mv_cv_temp.Set_background_color_bco(1024);}
-  else if (mv_cv_temp>optimal_temp && mv_cv_temp<critical_temp){t_mv_cv_temp.Set_background_color_bco(50720);}
-  else {t_mv_cv_temp.Set_background_color_bco(63488);}
+  if (mv_cv_temp <= optimal_temp){t_mv_cv_temp.Set_background_color_bco(1024); t_mv_cv_temp.Set_font_color_pco(65535);}
+  else if (mv_cv_temp>optimal_temp && mv_cv_temp<critical_temp){t_mv_cv_temp.Set_background_color_bco(50720); t_mv_cv_temp.Set_font_color_pco(0);}
+  else {t_mv_cv_temp.Set_background_color_bco(63488); t_mv_cv_temp.Set_font_color_pco(65535);}
 
 
   t_mv_cv_CO.setValue(mv_cv_CO);
@@ -422,30 +447,35 @@ void set_mv_av(){
     int mv_av_hum = round(humi_avg_tmp / circBuf_avg.trackedElements);
     float mv_av_temp = round(temp_avg_tmp / circBuf_avg.trackedElements);
 
-    byte critical_CO = 130;
+    byte critical_CO = 50;
     byte optimal_CO = 0;
-    int critical_CO2 = 1500;
-    int optimal_CO2 = 800;
-    byte critical_hum = 8;
-    byte optimal_hum = 65;
+
+    int critical_CO2 = 1800;
+    int optimal_CO2 = 1000;
+
+    byte optimal_hum_lower = 40;
+    byte optimal_hum_higher = 60;
+    byte critical_hum_lower = 30;
+    byte critical_hum_higher = 70;
+
     byte critical_temp = 35;
-    byte optimal_temp = 20;
+    byte optimal_temp = 26;
 
-    if (mv_av_CO <= optimal_CO){t_mv_av_CO.Set_background_color_bco(1024);}
-    else if (mv_av_CO>optimal_CO && mv_av_CO<critical_CO){t_mv_av_CO.Set_background_color_bco(50720);}
-    else {t_mv_av_CO.Set_background_color_bco(63488);}
+    if (mv_av_CO <= optimal_CO){t_mv_av_CO.Set_background_color_bco(1024); t_mv_av_CO.Set_font_color_pco(65535);}
+    else if (mv_av_CO>optimal_CO && mv_av_CO<critical_CO){t_mv_av_CO.Set_background_color_bco(50720); t_mv_av_CO.Set_font_color_pco(0);}
+    else {t_mv_av_CO.Set_background_color_bco(63488); t_mv_av_CO.Set_font_color_pco(65535);}
 
-    if (mv_av_CO2 <= optimal_CO2){t_mv_av_CO2.Set_background_color_bco(1024);}
-    else if (mv_av_CO2>optimal_CO2 && mv_av_CO2<critical_CO2){t_mv_av_CO2.Set_background_color_bco(50720);}
-    else {t_mv_av_CO2.Set_background_color_bco(63488);}
+    if (mv_av_CO2 <= optimal_CO2){t_mv_av_CO2.Set_background_color_bco(1024); t_mv_av_CO2.Set_font_color_pco(65535);}
+    else if (mv_av_CO2>optimal_CO2 && mv_av_CO2<critical_CO2){t_mv_av_CO2.Set_background_color_bco(50720); t_mv_av_CO2.Set_font_color_pco(0);}
+    else {t_mv_av_CO2.Set_background_color_bco(63488); t_mv_av_CO2.Set_font_color_pco(65535);}
 
-    if (mv_av_hum <= optimal_hum){t_mv_av_hum.Set_background_color_bco(1024);}
-    else if (mv_av_hum>optimal_hum && mv_av_hum<critical_hum){t_mv_av_hum.Set_background_color_bco(50720);}
-    else {t_mv_av_hum.Set_background_color_bco(63488);}
+    if (mv_av_hum <= optimal_hum_higher &&  mv_av_hum >= optimal_hum_lower){t_mv_av_hum.Set_background_color_bco(1024); t_mv_av_hum.Set_font_color_pco(65535);}
+    else if ((critical_hum_lower <= mv_av_hum && mv_av_hum < optimal_hum_lower) || (mv_av_hum > optimal_hum_higher && mv_av_hum <= critical_hum_higher) ){t_mv_av_hum.Set_background_color_bco(50720); t_mv_av_hum.Set_font_color_pco(0);}
+    else {t_mv_av_hum.Set_background_color_bco(63488); t_mv_av_hum.Set_font_color_pco(65535);}
     
-    if (mv_av_temp <= optimal_temp){t_mv_av_temp.Set_background_color_bco(1024);}
-    else if (mv_av_temp>optimal_temp && mv_av_temp<critical_temp){t_mv_av_temp.Set_background_color_bco(50720);}
-    else {t_mv_av_temp.Set_background_color_bco(63488);}
+    if (mv_av_temp <= optimal_temp){t_mv_av_temp.Set_background_color_bco(1024); t_mv_av_temp.Set_font_color_pco(65535);}
+    else if (mv_av_temp>optimal_temp && mv_av_temp<critical_temp){t_mv_av_temp.Set_background_color_bco(50720); t_mv_av_temp.Set_font_color_pco(0);}
+    else {t_mv_av_temp.Set_background_color_bco(63488); t_mv_av_temp.Set_font_color_pco(65535);}
 
     t_mv_av_CO.setValue(mv_av_CO);
     t_mv_av_CO2.setValue(mv_av_CO2);
@@ -552,6 +582,8 @@ void set_time(){
   sprintf(buffer, "%02i:%02i", currentTime[2], currentTime[1]);
 
   clock.setText(buffer);
+  //clock1.setText(buffer);
+  //clock2.setText(buffer);
 }
 
 // --------------------------------------------------------------------------------- +++++++++++++++++++++++++++++++++++++++++++++++ ------------------------------------------------------------------------
